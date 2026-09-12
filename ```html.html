@@ -1,0 +1,1026 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Office Rush</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #18202a;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.game-container {
+    width: min(1100px, 100%);
+    padding: 15px;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.stats {
+    display: flex;
+    gap: 8px;
+}
+
+.stat {
+    background: #263240;
+    padding: 8px 12px;
+    border-radius: 20px;
+}
+
+canvas {
+    width: 100%;
+    display: block;
+    background: #d8dde2;
+    border: 2px solid #465464;
+    border-radius: 14px;
+}
+
+.help {
+    text-align: center;
+    margin-top: 10px;
+    color: #b9c5d2;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.card {
+    background: #202a35;
+    padding: 30px;
+    border-radius: 18px;
+    text-align: center;
+    width: min(420px, 90%);
+}
+
+button {
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    background: #4f8cff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+    <div class="top">
+        <div class="title">🏢 Office Rush</div>
+
+        <div class="stats">
+            <div class="stat">
+                Tasks: <span id="tasks">0</span>/8
+            </div>
+
+            <div class="stat">
+                Time: <span id="time">60</span>s
+            </div>
+
+            <div class="stat">
+                Score: <span id="score">0</span>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="game" width="960" height="540"></canvas>
+
+    <div class="help">
+        WASD / Arrow Keys to move · Walk into blue tasks · Avoid coworkers · R to restart
+    </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+
+    <div class="card">
+
+        <h2 id="resultTitle">Workday Complete!</h2>
+
+        <p id="resultText"></p>
+
+        <button id="restart">
+            Play Again
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const WIDTH = canvas.width;
+const HEIGHT = canvas.height;
+
+const keys = {};
+
+let score = 0;
+let tasksCompleted = 0;
+let timeLeft = 60;
+let gameOver = false;
+
+let lastTime = performance.now();
+
+
+// -------------------------
+// PLAYER
+// -------------------------
+
+const player = {
+
+    x: 90,
+    y: 445,
+
+    width: 28,
+    height: 28,
+
+    speed: 190
+
+};
+
+
+// -------------------------
+// OFFICE DESKS
+// -------------------------
+
+const desks = [
+
+    { x: 45,  y: 55,  width: 220, height: 95 },
+    { x: 330, y: 55,  width: 220, height: 95 },
+    { x: 615, y: 55,  width: 290, height: 95 },
+
+    { x: 45,  y: 255, width: 220, height: 95 },
+    { x: 330, y: 255, width: 220, height: 95 },
+    { x: 615, y: 255, width: 290, height: 95 },
+
+    { x: 295, y: 420, width: 370, height: 55 }
+
+];
+
+
+// -------------------------
+// TASKS
+// -------------------------
+
+let tasks = [];
+
+
+// -------------------------
+// COWORKERS
+// -------------------------
+
+const coworkers = [
+
+    {
+        x: 300,
+        y: 195,
+        radius: 14,
+        vx: 85,
+        vy: 0
+    },
+
+    {
+        x: 580,
+        y: 205,
+        radius: 14,
+        vx: -70,
+        vy: 0
+    },
+
+    {
+        x: 430,
+        y: 380,
+        radius: 14,
+        vx: 0,
+        vy: -55
+    }
+
+];
+
+
+// -------------------------
+// RESET
+// -------------------------
+
+function resetGame() {
+
+    score = 0;
+
+    tasksCompleted = 0;
+
+    timeLeft = 60;
+
+    gameOver = false;
+
+    player.x = 90;
+    player.y = 445;
+
+
+    tasks = [
+
+        { x: 290, y: 195, label: "EMAIL", pulse: 0 },
+
+        { x: 575, y: 200, label: "REPORT", pulse: 0 },
+
+        { x: 870, y: 205, label: "COFFEE", pulse: 0 },
+
+        { x: 285, y: 385, label: "PRINT", pulse: 0 },
+
+        { x: 575, y: 385, label: "MEETING", pulse: 0 },
+
+        { x: 875, y: 385, label: "SHEET", pulse: 0 },
+
+        { x: 145, y: 200, label: "TASK", pulse: 0 },
+
+        { x: 730, y: 205, label: "CALL", pulse: 0 }
+
+    ];
+
+
+    coworkers[0].x = 300;
+    coworkers[0].y = 195;
+
+    coworkers[1].x = 580;
+    coworkers[1].y = 205;
+
+    coworkers[2].x = 430;
+    coworkers[2].y = 380;
+
+
+    document.getElementById("overlay").style.display = "none";
+
+    updateUI();
+
+}
+
+
+// -------------------------
+// UI
+// -------------------------
+
+function updateUI() {
+
+    document.getElementById("tasks").textContent =
+        tasksCompleted;
+
+    document.getElementById("time").textContent =
+        Math.max(0, Math.ceil(timeLeft));
+
+    document.getElementById("score").textContent =
+        score;
+
+}
+
+
+// -------------------------
+// COLLISION
+// -------------------------
+
+function rectanglesOverlap(a, b) {
+
+    return (
+
+        a.x < b.x + b.width &&
+
+        a.x + a.width > b.x &&
+
+        a.y < b.y + b.height &&
+
+        a.y + a.height > b.y
+
+    );
+
+}
+
+
+function circleRectangleCollision(circle, rectangle) {
+
+    const closestX =
+        Math.max(
+            rectangle.x,
+            Math.min(
+                circle.x,
+                rectangle.x + rectangle.width
+            )
+        );
+
+    const closestY =
+        Math.max(
+            rectangle.y,
+            Math.min(
+                circle.y,
+                rectangle.y + rectangle.height
+            )
+        );
+
+    const dx = circle.x - closestX;
+    const dy = circle.y - closestY;
+
+    return dx * dx + dy * dy <
+           circle.radius * circle.radius;
+
+}
+
+
+// -------------------------
+// CHECK WALL / DESK
+// -------------------------
+
+function blocked(x, y) {
+
+    const playerBox = {
+
+        x: x,
+        y: y,
+
+        width: player.width,
+        height: player.height
+
+    };
+
+
+    return desks.some(
+        desk => rectanglesOverlap(playerBox, desk)
+    );
+
+}
+
+
+// -------------------------
+// MOVE PLAYER
+// -------------------------
+
+function movePlayer(dx, dy) {
+
+    const newX = player.x + dx;
+    const newY = player.y + dy;
+
+
+    if (
+
+        newX >= 10 &&
+
+        newX + player.width <= WIDTH - 10 &&
+
+        !blocked(newX, player.y)
+
+    ) {
+
+        player.x = newX;
+
+    }
+
+
+    if (
+
+        newY >= 10 &&
+
+        newY + player.height <= HEIGHT - 10 &&
+
+        !blocked(player.x, newY)
+
+    ) {
+
+        player.y = newY;
+
+    }
+
+}
+
+
+// -------------------------
+// COMPLETE TASK
+// -------------------------
+
+function completeTask(index) {
+
+    tasksCompleted++;
+
+    score += 100;
+
+    tasks.splice(index, 1);
+
+
+    if (tasksCompleted >= 8) {
+
+        endGame(true);
+
+    }
+
+}
+
+
+// -------------------------
+// GAME OVER
+// -------------------------
+
+function endGame(won) {
+
+    gameOver = true;
+
+
+    const title =
+        document.getElementById("resultTitle");
+
+    const text =
+        document.getElementById("resultText");
+
+
+    if (won) {
+
+        title.textContent =
+            "🎉 Promotion Material!";
+
+        text.textContent =
+            "You completed every task! Final score: " +
+            score;
+
+    }
+
+    else {
+
+        title.textContent =
+            "⏰ Workday Over";
+
+        text.textContent =
+            "You completed " +
+            tasksCompleted +
+            "/8 tasks. Final score: " +
+            score;
+
+    }
+
+
+    document.getElementById("overlay").style.display =
+        "grid";
+
+}
+
+
+// -------------------------
+// UPDATE
+// -------------------------
+
+function update(deltaTime) {
+
+    if (gameOver) {
+        return;
+    }
+
+
+    timeLeft -= deltaTime;
+
+
+    if (timeLeft <= 0) {
+
+        timeLeft = 0;
+
+        endGame(false);
+
+        return;
+
+    }
+
+
+    let moveX = 0;
+    let moveY = 0;
+
+
+    if (keys["w"] || keys["ArrowUp"]) {
+        moveY--;
+    }
+
+    if (keys["s"] || keys["ArrowDown"]) {
+        moveY++;
+    }
+
+    if (keys["a"] || keys["ArrowLeft"]) {
+        moveX--;
+    }
+
+    if (keys["d"] || keys["ArrowRight"]) {
+        moveX++;
+    }
+
+
+    if (moveX !== 0 || moveY !== 0) {
+
+        const length =
+            Math.hypot(moveX, moveY);
+
+
+        moveX /= length;
+        moveY /= length;
+
+
+        movePlayer(
+
+            moveX * player.speed * deltaTime,
+
+            moveY * player.speed * deltaTime
+
+        );
+
+    }
+
+
+    // Move coworkers
+
+    for (const coworker of coworkers) {
+
+        coworker.x += coworker.vx * deltaTime;
+
+        coworker.y += coworker.vy * deltaTime;
+
+
+        if (coworker.vx !== 0) {
+
+            if (coworker.x < 285) {
+
+                coworker.x = 285;
+
+                coworker.vx *= -1;
+
+            }
+
+
+            if (coworker.x > 650) {
+
+                coworker.x = 650;
+
+                coworker.vx *= -1;
+
+            }
+
+        }
+
+
+        else {
+
+            if (coworker.y < 180) {
+
+                coworker.y = 180;
+
+                coworker.vy *= -1;
+
+            }
+
+
+            if (coworker.y > 390) {
+
+                coworker.y = 390;
+
+                coworker.vy *= -1;
+
+            }
+
+        }
+
+
+        if (
+            circleRectangleCollision(
+                coworker,
+                player
+            )
+        ) {
+
+            score = Math.max(0, score - 25);
+
+            player.x = 90;
+            player.y = 445;
+
+        }
+
+    }
+
+
+    // Check tasks
+
+    for (
+        let i = tasks.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const task = tasks[i];
+
+        task.pulse += deltaTime * 4;
+
+
+        const dx =
+            player.x +
+            player.width / 2 -
+            task.x;
+
+        const dy =
+            player.y +
+            player.height / 2 -
+            task.y;
+
+
+        const distance =
+            Math.hypot(dx, dy);
+
+
+        if (distance < 28) {
+
+            completeTask(i);
+
+        }
+
+    }
+
+
+    updateUI();
+
+}
+
+
+// -------------------------
+// DRAW DESK
+// -------------------------
+
+function drawDesk(desk) {
+
+    ctx.fillStyle = "#8795a3";
+
+    ctx.fillRect(
+        desk.x,
+        desk.y,
+        desk.width,
+        desk.height
+    );
+
+
+    ctx.fillStyle = "#667582";
+
+    ctx.fillRect(
+        desk.x + 8,
+        desk.y + 8,
+        desk.width - 16,
+        18
+    );
+
+
+    ctx.fillStyle = "#b8c2cc";
+
+    ctx.fillRect(
+        desk.x + 18,
+        desk.y + 35,
+        48,
+        28
+    );
+
+
+    ctx.fillStyle = "#4d5965";
+
+    ctx.fillRect(
+        desk.x + 82,
+        desk.y + 35,
+        52,
+        28
+    );
+
+}
+
+
+// -------------------------
+// DRAW GAME
+// -------------------------
+
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    // Floor
+
+    ctx.fillStyle = "#d8dde2";
+
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    // Floor tiles
+
+    ctx.strokeStyle = "#c4cbd2";
+
+    ctx.lineWidth = 1;
+
+
+    for (let x = 0; x < WIDTH; x += 48) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(x, 0);
+
+        ctx.lineTo(x, HEIGHT);
+
+        ctx.stroke();
+
+    }
+
+
+    for (let y = 0; y < HEIGHT; y += 48) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, y);
+
+        ctx.lineTo(WIDTH, y);
+
+        ctx.stroke();
+
+    }
+
+
+    // Border
+
+    ctx.fillStyle = "#3e4a56";
+
+    ctx.fillRect(0, 0, WIDTH, 10);
+
+    ctx.fillRect(0, HEIGHT - 10, WIDTH, 10);
+
+    ctx.fillRect(0, 0, 10, HEIGHT);
+
+    ctx.fillRect(WIDTH - 10, 0, 10, HEIGHT);
+
+
+    // Desks
+
+    desks.forEach(drawDesk);
+
+
+    // Tasks
+
+    for (const task of tasks) {
+
+        const glow =
+            8 + Math.sin(task.pulse) * 4;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            task.x,
+            task.y,
+            17 + glow,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle =
+            "rgba(74,144,255,0.14)";
+
+        ctx.fill();
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            task.x,
+            task.y,
+            14,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle = "#4f8cff";
+
+        ctx.fill();
+
+
+        ctx.fillStyle = "white";
+
+        ctx.font = "bold 10px Arial";
+
+        ctx.textAlign = "center";
+
+        ctx.textBaseline = "middle";
+
+        ctx.fillText(
+            "✓",
+            task.x,
+            task.y
+        );
+
+
+        ctx.fillStyle = "#31404f";
+
+        ctx.font = "bold 11px Arial";
+
+        ctx.fillText(
+            task.label,
+            task.x,
+            task.y + 29
+        );
+
+    }
+
+
+    // Coworkers
+
+    for (const coworker of coworkers) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            coworker.x,
+            coworker.y,
+            coworker.radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle = "#e37b68";
+
+        ctx.fill();
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            coworker.x,
+            coworker.y - 4,
+            7,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle = "#f1c7a8";
+
+        ctx.fill();
+
+    }
+
+
+    // Player
+
+    ctx.fillStyle = "#2f9b6d";
+
+    ctx.fillRect(
+        player.x,
+        player.y,
+        player.width,
+        player.height
+    );
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        player.x + player.width / 2,
+        player.y - 3,
+        8,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.fillStyle = "#f2caab";
+
+    ctx.fill();
+
+
+    ctx.fillStyle = "#1f6d4a";
+
+    ctx.fillRect(
+        player.x + 5,
+        player.y + 18,
+        18,
+        5
+    );
+
+}
+
+
+// -------------------------
+// KEYBOARD
+// -------------------------
+
+window.addEventListener(
+    "keydown",
+    function(event) {
+
+        keys[event.key] = true;
+
+
+        if (
+            event.key.toLowerCase() === "r"
+        ) {
+
+            resetGame();
+
+        }
+
+    }
+);
+
+
+window.addEventListener(
+    "keyup",
+    function(event) {
+
+        keys[event.key] = false;
+
+    }
+);
+
+
+// -------------------------
+// RESTART BUTTON
+// -------------------------
+
+document.getElementById("restart")
+    .addEventListener(
+        "click",
+        resetGame
+    );
+
+
+// -------------------------
+// GAME LOOP
+// -------------------------
+
+function gameLoop(currentTime) {
+
+    const deltaTime =
+        Math.min(
+            (currentTime - lastTime) / 1000,
+            0.033
+        );
+
+
+    lastTime = currentTime;
+
+
+    update(deltaTime);
+
+    draw();
+
+
+    requestAnimationFrame(gameLoop);
+
+}
+
+
+// START
+
+resetGame();
+
+requestAnimationFrame(gameLoop);
+
+</script>
+
+</body>
+</html>
+``

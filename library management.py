@@ -7975,6 +7975,10 @@ def inspect_copy(
             db.close()
 
 
+
+def greetings():
+    print("hello world!")
+    print("This is my testing branch.")
 # =========================================================
 # STAFF OVERDUE CHECK
 # =========================================================

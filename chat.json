@@ -1,0 +1,24 @@
+[
+    {
+        "message": "Hello!"
+    },
+    {
+        "message": "how are you"
+    },
+    {
+        "message": "Hello!"
+    },
+    {
+        "message": "fasr!"
+    },
+    {
+        "message": 1
+    },
+    {
+        "message": true
+    },
+    {
+        "message": true,
+        "age": 7
+    }
+]

@@ -1,0 +1,182 @@
+[
+  {
+    "name": "Classic Shirt",
+    "material_type": "Cotton",
+    "size": "M",
+    "color": "White"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Cotton",
+    "size": "L",
+    "color": "Blue"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Linen",
+    "size": "M",
+    "color": "White"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Denim",
+    "size": "S",
+    "color": "Black"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Linen",
+    "size": "M",
+    "color": "Blue"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Cotton",
+    "size": "L",
+    "color": "Green"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Polyester",
+    "size": "XL",
+    "color": "Black"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Denim",
+    "size": "M",
+    "color": "Blue"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Cotton",
+    "size": "S",
+    "color": "Yellow"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Linen",
+    "size": "L",
+    "color": "White"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Cotton",
+    "size": "XL",
+    "color": "Black"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Denim",
+    "size": "M",
+    "color": "Red"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Cotton",
+    "size": "S",
+    "color": "Blue"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Polyester",
+    "size": "L",
+    "color": "Gray"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Linen",
+    "size": "XL",
+    "color": "White"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Denim",
+    "size": "M",
+    "color": "Green"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Cotton",
+    "size": "S",
+    "color": "Red"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Polyester",
+    "size": "L",
+    "color": "Blue"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Linen",
+    "size": "XL",
+    "color": "Black"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Denim",
+    "size": "M",
+    "color": "White"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Cotton",
+    "size": "S",
+    "color": "Green"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Cotton",
+    "size": "L",
+    "color": "Yellow"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Linen",
+    "size": "XL",
+    "color": "Blue"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Denim",
+    "size": "M",
+    "color": "Black"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Polyester",
+    "size": "S",
+    "color": "White"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Cotton",
+    "size": "L",
+    "color": "Red"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Linen",
+    "size": "M",
+    "color": "Gray"
+  },
+  {
+    "name": "Classic Shirt",
+    "material_type": "Denim",
+    "size": "XL",
+    "color": "Green"
+  },
+  {
+    "name": "Denim Shirt",
+    "material_type": "Cotton",
+    "size": "S",
+    "color": "White"
+  },
+  {
+    "name": "Summer Shirt",
+    "material_type": "Cotton",
+    "size": "L",
+    "color": "Blue"
+  }
+]

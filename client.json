@@ -1,0 +1,50 @@
+[
+    {
+        "id": 1,
+        "name": "Wireless Mouse",
+        "price": 2500,
+        "stock": 15
+    },
+    {
+        "id": 2,
+        "name": "Mechanical Keyboard",
+        "price": 8500,
+        "stock": 8
+    },
+    {
+        "id": 3,
+        "name": "USB-C Hub",
+        "price": 4500,
+        "stock": 20
+    },
+    {
+        "id": 4,
+        "name": "Gaming Headset",
+        "price": 6500,
+        "stock": 12
+    },
+    {
+        "id": 5,
+        "name": "Webcam 1080p",
+        "price": 5500,
+        "stock": 6
+    },
+    {
+        "id": 6,
+        "name": "Laptop Stand",
+        "price": 3500,
+        "stock": 10
+    },
+    {
+        "id": 7,
+        "name": "Bluetooth Speaker",
+        "price": 7000,
+        "stock": 5
+    },
+    {
+        "id": 8,
+        "name": "Portable SSD 1TB",
+        "price": 18500,
+        "stock": 4
+    }
+]
