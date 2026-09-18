@@ -1,0 +1,5 @@
+.venv/	                   #Don't upload our virtual environment
+__pycache__/	           #Python-generated cache
+*.pyc	                   #Compiled Python files
+.env	                   #Secrets must never go to GitHub
+*.log	                   #Local log files
