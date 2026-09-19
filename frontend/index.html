@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Clone Backend Tester</title>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        input {
+            padding: 10px;
+            margin: 5px;
+            width: 220px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            background: #111;
+            color: #00ff00;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .online {
+            color: green;
+            font-weight: bold;
+        }
+
+        .offline {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>WhatsApp Clone Backend Tester</h1>
+    <p>Frontend for testing Flask + MySQL + Socket.IO</p>
+
+    <div class="section">
+        <h2>1. Register</h2>
+
+        <input id="registerUsername" placeholder="Username">
+        <input id="registerEmail" placeholder="Email">
+        <input id="registerPassword" type="password" placeholder="Password">
+
+        <br>
+
+        <button onclick="registerUser()">Register</button>
+    </div>
+
+
+    <div class="section">
+        <h2>2. Login</h2>
+
+        <input id="loginUsername" placeholder="Username">
+        <input id="loginPassword" type="password" placeholder="Password">
+
+        <br>
+
+        <button onclick="loginUser()">Login</button>
+
+        <p>
+            Logged-in user:
+            <strong id="currentUser">None</strong>
+        </p>
+
+        <p>
+            Socket:
+            <strong id="socketStatus" class="offline">Disconnected</strong>
+        </p>
+
+        <p>
+            SID:
+            <strong id="sid">None</strong>
+        </p>
+    </div>
+
+
+    <div class="section">
+        <h2>3. Direct Conversation</h2>
+
+        <input id="targetUsername" placeholder="Other user's username">
+
+        <br>
+
+        <button onclick="createConversation()">
+            Create / Get Conversation
+        </button>
+
+        <p>
+            Conversation ID:
+            <strong id="conversationId">None</strong>
+        </p>
+
+        <button onclick="joinConversation()">
+            Join Conversation
+        </button>
+    </div>
+
+
+    <div class="section">
+        <h2>4. Send Message</h2>
+
+        <input id="messageContent" placeholder="Write a message">
+
+        <br>
+
+        <button onclick="sendMessage()">
+            Send Message
+        </button>
+    </div>
+
+
+    <div class="section">
+        <h2>5. Message Status</h2>
+
+        <input id="statusMessageId" placeholder="Message ID">
+
+        <br>
+
+        <button onclick="markDelivered()">
+            Mark Delivered
+        </button>
+
+        <button onclick="markRead()">
+            Mark Read
+        </button>
+    </div>
+
+
+    <div class="section">
+        <h2>6. Messages / Events</h2>
+
+        <div id="messages"></div>
+
+        <br>
+
+        <button onclick="clearLogs()">
+            Clear Logs
+        </button>
+    </div>
+
+
+<script>
+
+const API_URL = "http://127.0.0.1:5000";
+
+let token = null;
+let socket = null;
+let currentUserId = null;
+let currentUsername = null;
+let currentConversationId = null;
+
+
+function log(message) {
+
+    const box = document.getElementById("messages");
+
+    const time = new Date().toLocaleTimeString();
+
+    box.textContent += `[${time}] ${message}\n`;
+
+    box.scrollTop = box.scrollHeight;
+}
+
+
+function clearLogs() {
+
+    document.getElementById("messages").textContent = "";
+}
+
+
+async function registerUser() {
+
+    const username =
+        document.getElementById("registerUsername").value.trim();
+
+    const email =
+        document.getElementById("registerEmail").value.trim();
+
+    const password =
+        document.getElementById("registerPassword").value;
+
+    if (!username || !email || !password) {
+
+        log("Please fill all registration fields.");
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(`${API_URL}/register`, {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        log(`REGISTER RESPONSE:\n${JSON.stringify(data, null, 2)}`);
+
+    } catch (error) {
+
+        log(`Registration error: ${error.message}`);
+    }
+}
+
+
+async function loginUser() {
+
+    const username =
+        document.getElementById("loginUsername").value.trim();
+
+    const password =
+        document.getElementById("loginPassword").value;
+
+    if (!username || !password) {
+
+        log("Please enter username and password.");
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(`${API_URL}/login`, {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        log(`LOGIN RESPONSE:\n${JSON.stringify(data, null, 2)}`);
+
+        if (!response.ok) {
+
+            return;
+        }
+
+        token =
+            data.token ||
+            data.access_token ||
+            data.data?.token;
+
+        currentUserId =
+            data.user_id ||
+            data.user?.id ||
+            data.data?.user_id ||
+            data.data?.user?.id;
+
+        currentUsername =
+            data.username ||
+            data.user?.username ||
+            data.data?.username ||
+            data.data?.user?.username ||
+            username;
+
+        if (!token) {
+
+            log("Login succeeded, but no JWT token was found.");
+
+            return;
+        }
+
+        document.getElementById("currentUser").textContent =
+            `${currentUsername} (ID: ${currentUserId ?? "unknown"})`;
+
+        connectSocket();
+
+    } catch (error) {
+
+        log(`Login error: ${error.message}`);
+    }
+}
+
+
+function connectSocket() {
+
+    if (socket) {
+
+        socket.disconnect();
+    }
+
+    log("Connecting to Socket.IO...");
+
+    socket = io(API_URL, {
+
+        auth: {
+            token: token
+        }
+    });
+
+
+    socket.on("connect", () => {
+
+        document.getElementById("socketStatus").textContent =
+            "Connected";
+
+        document.getElementById("socketStatus").className =
+            "online";
+
+        document.getElementById("sid").textContent =
+            socket.id;
+
+        log(`SOCKET CONNECTED`);
+        log(`SID: ${socket.id}`);
+    });
+
+
+    socket.on("connection_response", (data) => {
+
+        log(
+            `CONNECTION RESPONSE:\n${JSON.stringify(data, null, 2)}`
+        );
+    });
+
+
+    socket.on("disconnect", (reason) => {
+
+        document.getElementById("socketStatus").textContent =
+            "Disconnected";
+
+        document.getElementById("socketStatus").className =
+            "offline";
+
+        document.getElementById("sid").textContent =
+            "None";
+
+        log(`SOCKET DISCONNECTED: ${reason}`);
+    });
+
+
+    socket.on("connect_error", (error) => {
+
+        log(`SOCKET CONNECTION ERROR: ${error.message}`);
+    });
+
+
+    socket.on("error", (data) => {
+
+        log(
+            `SOCKET ERROR:\n${JSON.stringify(data, null, 2)}`
+        );
+    });
+
+
+    socket.on("conversation_joined", (data) => {
+
+        log(
+            `CONVERSATION JOINED:\n${JSON.stringify(data, null, 2)}`
+        );
+    });
+
+
+    socket.on("new_message", (data) => {
+
+        log(
+            `NEW MESSAGE:\n${JSON.stringify(data, null, 2)}`
+        );
+
+        if (data.message && data.message.id) {
+
+            document.getElementById("statusMessageId").value =
+                data.message.id;
+        }
+    });
+
+
+    socket.on("message_status", (data) => {
+
+        log(
+            `MESSAGE STATUS:\n${JSON.stringify(data, null, 2)}`
+        );
+    });
+}
+
+
+async function createConversation() {
+
+    if (!token) {
+
+        log("Please login first.");
+
+        return;
+    }
+
+    const username =
+        document.getElementById("targetUsername").value.trim();
+
+    if (!username) {
+
+        log("Enter the other user's username.");
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/conversations/direct`,
+            {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+
+                body: JSON.stringify({
+                    username: username
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        log(
+            `CONVERSATION RESPONSE:\n${JSON.stringify(data, null, 2)}`
+        );
+
+        if (!response.ok) {
+
+            return;
+        }
+
+        currentConversationId =
+            data.conversation_id ||
+            data.id ||
+            data.data?.conversation_id ||
+            data.data?.id;
+
+        document.getElementById("conversationId").textContent =
+            currentConversationId ?? "Not found";
+
+    } catch (error) {
+
+        log(`Conversation error: ${error.message}`);
+    }
+}
+
+
+function joinConversation() {
+
+    if (!socket || !socket.connected) {
+
+        log("Socket is not connected.");
+
+        return;
+    }
+
+    if (!currentConversationId) {
+
+        log("Create a conversation first.");
+
+        return;
+    }
+
+    socket.emit("join_conversation", {
+
+        conversation_id: currentConversationId
+    });
+
+    log(
+        `JOIN_CONVERSATION SENT: ${currentConversationId}`
+    );
+}
+
+
+function sendMessage() {
+
+    if (!socket || !socket.connected) {
+
+        log("Socket is not connected.");
+
+        return;
+    }
+
+    if (!currentConversationId) {
+
+        log("Create and join a conversation first.");
+
+        return;
+    }
+
+    const content =
+        document.getElementById("messageContent").value.trim();
+
+    if (!content) {
+
+        log("Message cannot be empty.");
+
+        return;
+    }
+
+    socket.emit("send_message", {
+
+        conversation_id: currentConversationId,
+
+        content: content
+    });
+
+    log(`SEND_MESSAGE SENT: ${content}`);
+
+    document.getElementById("messageContent").value = "";
+}
+
+
+function markDelivered() {
+
+    if (!socket || !socket.connected) {
+
+        log("Socket is not connected.");
+
+        return;
+    }
+
+    const messageId =
+        document.getElementById("statusMessageId").value.trim();
+
+    if (!messageId) {
+
+        log("Enter a message ID.");
+
+        return;
+    }
+
+    socket.emit("message_delivered", {
+
+        conversation_id: currentConversationId,
+
+        message_id: Number(messageId)
+    });
+
+    log(
+        `MESSAGE_DELIVERED SENT: ${messageId}`
+    );
+}
+
+
+function markRead() {
+
+    if (!socket || !socket.connected) {
+
+        log("Socket is not connected.");
+
+        return;
+    }
+
+    const messageId =
+        document.getElementById("statusMessageId").value.trim();
+
+    if (!messageId) {
+
+        log("Enter a message ID.");
+
+        return;
+    }
+
+    socket.emit("message_read", {
+
+        conversation_id: currentConversationId,
+
+        message_id: Number(messageId)
+    });
+
+    log(
+        `MESSAGE_READ SENT: ${messageId}`
+    );
+}
+
+</script>
+
+</body>
+</html>

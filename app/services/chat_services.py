@@ -221,11 +221,19 @@ def send_message(user_id, conversation_id, content):
         cursor.execute(
             """
             INSERT INTO messages
-                (conversation_id, sender_id, content)
+                (
+                    conversation_id,
+                    sender_id,
+                    content
+                )
             VALUES
                 (%s, %s, %s)
             """,
-            (conversation_id, user_id, content)
+            (
+                conversation_id,
+                user_id,
+                content
+            )
         )
 
         message_id = cursor.lastrowid
@@ -239,7 +247,8 @@ def send_message(user_id, conversation_id, content):
                 conversation_id,
                 sender_id,
                 content,
-                created_at
+                created_at,
+                status
             FROM messages
             WHERE id = %s
             """,
@@ -325,10 +334,13 @@ def get_messages(user_id, conversation_id):
                 id,
                 sender_id,
                 content,
-                created_at
+                created_at,
+                status
             FROM messages
             WHERE conversation_id = %s
-            ORDER BY created_at ASC, id ASC
+            ORDER BY
+                created_at ASC,
+                id ASC
             """,
             (conversation_id,)
         )
@@ -347,6 +359,160 @@ def get_messages(user_id, conversation_id):
             "status": 500,
             "message": "Failed to retrieve messages"
         }
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if connection:
+            connection.close()
+
+
+def update_message_status(
+    user_id,
+    conversation_id,
+    message_id,
+    new_status
+):
+
+    allowed_statuses = {
+        "delivered",
+        "read"
+    }
+
+    if new_status not in allowed_statuses:
+        return {
+            "success": False,
+            "status": 400,
+            "message": "Invalid message status"
+        }
+
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute(
+            """
+            SELECT
+                m.id,
+                m.sender_id,
+                m.status
+            FROM messages m
+            JOIN conversation_members cm
+                ON m.conversation_id = cm.conversation_id
+            WHERE m.id = %s
+              AND m.conversation_id = %s
+              AND cm.user_id = %s
+            """,
+            (
+                message_id,
+                conversation_id,
+                user_id
+            )
+        )
+
+        message = cursor.fetchone()
+
+        if not message:
+            return {
+                "success": False,
+                "status": 404,
+                "message": "Message not found"
+            }
+
+        if message["sender_id"] == user_id:
+            return {
+                "success": False,
+                "status": 403,
+                "message": "You cannot update your own message status"
+            }
+
+        current_status = message["status"]
+
+        if current_status == "read":
+            return {
+                "success": True,
+                "status": 200,
+                "message": "Message is already read"
+            }
+
+        if current_status == "delivered" and new_status == "delivered":
+            return {
+                "success": True,
+                "status": 200,
+                "message": "Message is already delivered"
+            }
+
+        if current_status == "sent" and new_status == "read":
+            new_status = "read"
+
+        cursor.execute(
+            """
+            UPDATE messages
+            SET status = %s
+            WHERE id = %s
+            """,
+            (
+                new_status,
+                message_id
+            )
+        )
+
+        connection.commit()
+
+        return {
+            "success": True,
+            "status": 200,
+            "message": "Message status updated",
+            "message_id": message_id,
+            "new_status": new_status,
+            "sender_id": message["sender_id"]
+        }
+
+    except Exception:
+        if connection:
+            connection.rollback()
+
+        return {
+            "success": False,
+            "status": 500,
+            "message": "Failed to update message status"
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if connection:
+            connection.close()
+
+
+def is_conversation_member(user_id, conversation_id):
+
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM conversation_members
+            WHERE conversation_id = %s
+              AND user_id = %s
+            """,
+            (conversation_id, user_id)
+        )
+
+        return cursor.fetchone() is not None
+
+    except Exception:
+        return False
 
     finally:
         if cursor:

@@ -144,6 +144,13 @@ def login_user(username, password):
                 "message": "Invalid username or password"
             }
 
+        if user["status"] != "active":
+            return {
+                "success": False,
+                "status": 403,
+                "message": "Account is blocked"
+            }
+
         password_matches = bcrypt.checkpw(
             password.encode("utf-8"),
             user["password_hash"].encode("utf-8")

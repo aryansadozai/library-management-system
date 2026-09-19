@@ -1,14 +1,12 @@
 from flask import Blueprint, request, jsonify
-from app.services.chat_services import (
-    create_direct_conversation,
-    send_message,
-    get_messages
-)
 
 from app.services.chat_services import (
     create_direct_conversation,
-    send_message
+    send_message,
+    get_messages,
+    update_message_status
 )
+
 from app.utils.security import token_required
 
 
@@ -29,7 +27,7 @@ def create_direct_chat(payload):
     if set(data.keys()) != {"username"}:
         return jsonify({
             "error": "Request must contain username only"
-        }), 400,
+        }), 400
 
     result = create_direct_conversation(
         payload["user_id"],
@@ -45,6 +43,7 @@ def create_direct_chat(payload):
         "message": result["message"],
         "conversation_id": result["conversation_id"]
     }), result["status"]
+
 
 @chat_bp.route(
     "/conversations/<int:conversation_id>/messages",
@@ -102,3 +101,45 @@ def get_chat_messages(payload, conversation_id):
     return jsonify({
         "messages": result["messages"]
     }), 200
+
+
+@chat_bp.route(
+    "/conversations/<int:conversation_id>/messages/<int:message_id>/status",
+    methods=["PATCH"]
+)
+@token_required
+def update_chat_message_status(
+    payload,
+    conversation_id,
+    message_id
+):
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "error": "Request body must be JSON"
+        }), 400
+
+    if set(data.keys()) != {"status"}:
+        return jsonify({
+            "error": "Request must contain status only"
+        }), 400
+
+    result = update_message_status(
+        payload["user_id"],
+        conversation_id,
+        message_id,
+        data["status"]
+    )
+
+    if not result["success"]:
+        return jsonify({
+            "error": result["message"]
+        }), result["status"]
+
+    return jsonify({
+        "message": result["message"],
+        "message_id": result["message_id"],
+        "status": result["new_status"]
+    }), result["status"]
